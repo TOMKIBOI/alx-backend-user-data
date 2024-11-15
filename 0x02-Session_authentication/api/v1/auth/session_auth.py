@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """module with class to manage the API authentication"""
-from typing import List, TypeVar
+from typing import List, TypeVar, Union
 import re
-from os import getenv
 
 
 class Auth:
@@ -20,39 +19,27 @@ class Auth:
         """
         if path is not None and excluded_paths is not None:
             for exclude in [pat.strip() for pat in excluded_paths]:
-                pattern = ''
-                if exclude[-1] == '*':
-                    pattern = '{}.*'.format(exclude[0:-1])
-                elif exclude[-1] == '/':
-                    pattern = '{}/*'.format(exclude[0:-1])
+                pattern = ""
+                if exclude[-1] == "*":
+                    pattern = "{}.*".format(exclude[0:-1])
+                elif exclude[-1] == "/":
+                    pattern = "{}/*".format(exclude[0:-1])
                 else:
-                    pattern = '{}/*'.format(exclude)
+                    pattern = "{}/*".format(exclude)
                 if re.match(pattern, path):
                     return False
         return True
 
-    def authorization_header(self, request=None) -> str:
+    def authorization_header(self, request=None) -> Union[str, None]:
         """
-         Returns the authorization header from a request object
+        Returns the authorization header from a request object
         """
         if request is None:
             return None
-        return request.headers.get('Authorization', None)
+        return request.headers.get("Authorization", None)
 
-    def current_user(self, request=None) -> TypeVar('User'):
+    def current_user(self, request=None) -> Union[TypeVar("User"), None]:
         """
         Returns a User instance from information from a request object
         """
-        return None
-
-    def session_cookie(self, request=None):
-        """
-        Returns a cookie from a request
-        Args:
-            request : request object
-        Return:
-            value of _my_session_id cookie from request object
-        """
-        if request:
-            return request.cookies.get(getenv('SESSION_NAME'))
         return None
