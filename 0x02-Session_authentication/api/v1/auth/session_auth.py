@@ -1,45 +1,48 @@
 #!/usr/bin/env python3
-"""module with class to manage the API authentication"""
-from typing import List, TypeVar, Union
-import re
+""" Module for Session Authentication """
+
+from api.v1.auth.auth import Auth
+import uuid
+from models.user import User
 
 
-class Auth:
-    """class to manage authentication of the API"""
+class SessionAuth(Auth):
+    """ Session Authentication Class """
+    user_id_by_session_id = {}
 
-    def require_auth(self, path: str, excluded_paths: List[str]) -> bool:
-        """
-        Determines whether a given path requires authentication or not
-        Args:
-            - path(str): Url path to be checked
-            - excluded_paths(List of str): List of paths that do not require
-              authentication
-        Return:
-            - True if path is not in excluded_paths, else False
-        """
-        if path is not None and excluded_paths is not None:
-            for exclude in [pat.strip() for pat in excluded_paths]:
-                pattern = ""
-                if exclude[-1] == "*":
-                    pattern = "{}.*".format(exclude[0:-1])
-                elif exclude[-1] == "/":
-                    pattern = "{}/*".format(exclude[0:-1])
-                else:
-                    pattern = "{}/*".format(exclude)
-                if re.match(pattern, path):
-                    return False
-        return True
+    def create_session(self, user_id: str = None) -> str:
+        """ Creates a Session ID for a user_id """
+        if user_id is None or not isinstance(user_id, str):
+            return None
+        session_id = str(uuid.uuid4())
+        self.user_id_by_session_id[session_id] = user_id
+        return session_id
 
-    def authorization_header(self, request=None) -> Union[str, None]:
-        """
-        Returns the authorization header from a request object
-        """
+    def user_id_for_session_id(self, session_id: str = None) -> str:
+        """ Returns a User ID based on a Session ID """
+        if session_id is None or not isinstance(session_id, str):
+            return None
+        return self.user_id_by_session_id.get(session_id)
+
+    def current_user(self, request=None):
+        """ Returns a User instance based on a cookie value """
         if request is None:
             return None
-        return request.headers.get("Authorization", None)
+        session_id = self.session_cookie(request)
+        user_id = self.user_id_for_session_id(session_id)
+        if user_id is None:
+            return None
+        return User.get(user_id)
 
-    def current_user(self, request=None) -> Union[TypeVar("User"), None]:
-        """
-        Returns a User instance from information from a request object
-        """
-        return None
+    def destroy_session(self, request=None) -> bool:
+        """ Deletes the user session / logout """
+        if request is None:
+            return False
+        session_id = self.session_cookie(request)
+        if session_id is None:
+            return False
+        user_id = self.user_id_for_session_id(session_id)
+        if user_id is None:
+            return False
+        del self.user_id_by_session_id[session_id]
+        return True
